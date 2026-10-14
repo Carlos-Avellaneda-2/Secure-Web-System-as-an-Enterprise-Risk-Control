@@ -10,6 +10,15 @@ Sistema web pequeño que aplica controles de riesgo empresarial: un frontend Rea
 | HTTP (redirige a HTTPS) | http://team4-risk.duckdns.org |
 | Endpoint protegido | https://team4-risk.duckdns.org/api/risk-status |
 
+## Entregables
+
+| Entregable | Ubicación |
+|---|---|
+| Código fuente | [`frontend/`](frontend), [`backend/`](backend) |
+| README con URL HTTPS | este archivo |
+| Captura de llamada autenticada exitosa | [`evidencias/llamada-autenticada.png`](evidencias/llamada-autenticada.png) |
+| Evidencia del certificado válido | [`evidencias/despliegue.txt`](evidencias/despliegue.txt) (`openssl s_client`, `certbot certificates`, `renew --dry-run`) |
+
 ## Arquitectura
 
 ```
@@ -155,19 +164,27 @@ sudo bash ~/deploy/server-deploy.sh
 sudo bash ~/deploy/server-https.sh
 ```
 
-Redespliegues posteriores: `.\deploy\deploy.ps1 -Install`.
+Redespliegues posteriores: `.\deploy\deploy.ps1 -Install`. Si el certificado ya existe, `server-deploy.sh` conserva la redirección HTTP → HTTPS que agregó certbot.
 
 Logs de auditoría del servicio: `sudo journalctl -u enterprise-risk-api`.
 
+Notas del despliegue real:
+
+- En la instancia corrían dos contenedores Docker de laboratorios anteriores (`webframework` en :80 y `virtualization-lab` en :8080, este último expuesto a Internet). Se detuvieron y se les quitó el reinicio automático (`docker update --restart=no`) para liberar el puerto 80 para Apache y cerrar el 8080. No se borraron: `sudo docker start webframework virtualization-lab`.
+- Por eso el backend usa `127.0.0.1:8081` en producción, sin conflicto aunque esos contenedores vuelvan a arrancar.
+- `mod_ssl` en Amazon Linux 2023 solo genera `localhost.crt` al primer arranque de httpd; `server-deploy.sh` lo crea antes de `apachectl configtest`.
+
 ## Parte 7 — Checklist de verificación
 
-- [ ] `/api/risk-status` sin token devuelve 401.
-- [ ] Un usuario autenticado llama `/api/risk-status` desde el frontend.
-- [x] El backend valida issuer y audience del JWT.
-- [ ] La aplicación responde en https://team4-risk.duckdns.org.
-- [ ] El navegador muestra certificado válido y candado HTTPS.
-- [ ] Los puertos 8080 y 8081 no son accesibles desde Internet.
-- [ ] `sudo certbot renew --dry-run` termina con éxito.
+Evidencia en [`evidencias/despliegue.txt`](evidencias/despliegue.txt).
+
+- [x] `/api/risk-status` sin token (o con token inválido) devuelve 401 (`WWW-Authenticate: Bearer`).
+- [ ] Un usuario autenticado llama `/api/risk-status` desde el frontend (captura en `evidencias/llamada-autenticada.png`).
+- [x] El backend valida firma, issuer (`https://dev-onzcado3s7e0rlv3.us.auth0.com/`) y audience (`https://enterprise-risk-api`) del JWT.
+- [x] La aplicación responde en https://team4-risk.duckdns.org; http://team4-risk.duckdns.org redirige con 301.
+- [x] Certificado válido de Let's Encrypt (`CN=team4-risk.duckdns.org`, `Verify return code: 0 (ok)`).
+- [x] Los puertos 8080 y 8081 no responden desde Internet.
+- [x] `sudo certbot renew --dry-run` termina con éxito; `certbot-renew.timer` activo.
 
 ## Reflexión de control de riesgos
 

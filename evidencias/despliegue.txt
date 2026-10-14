@@ -1,0 +1,67 @@
+# Evidencia de despliegue - 2026-10-14 18:01 UTC
+
+## Certificado TLS (openssl s_client desde cliente externo)
+$ openssl s_client -connect team4-risk.duckdns.org:443 -servername team4-risk.duckdns.org | openssl x509 -noout -subject -issuer -dates
+subject=CN=team4-risk.duckdns.org
+issuer=C=US, O=Let's Encrypt, CN=YE1
+notBefore=Oct 14 16:57:49 2026 GMT
+notAfter=Jan 12 16:57:48 2027 GMT
+X509v3 Subject Alternative Name: 
+    DNS:team4-risk.duckdns.org
+Verify return code: 0 (ok)
+
+## certbot certificates / renew --dry-run (servidor)
+$ sudo certbot certificates
+  Certificate Name: team4-risk.duckdns.org
+    Key Type: ECDSA
+    Domains: team4-risk.duckdns.org
+    Expiry Date: 2027-01-12 16:57:48+00:00 (VALID: 89 days)
+
+$ sudo certbot renew --dry-run
+Simulating renewal of an existing certificate for team4-risk.duckdns.org
+Congratulations, all simulated renewals succeeded: 
+  /etc/letsencrypt/live/team4-risk.duckdns.org/fullchain.pem (success)
+
+$ systemctl list-timers certbot-renew.timer
+NEXT                        LEFT     LAST PASSED UNIT                ACTIVATES
+Thu 2026-10-15 08:48:43 UTC 14h left -    -      certbot-renew.timer certbot-renew.service
+
+## HTTP redirige a HTTPS
+$ curl -I http://team4-risk.duckdns.org/
+HTTP/1.1 301 Moved Permanently
+Location: https://team4-risk.duckdns.org/
+
+## API sin token devuelve 401
+$ curl -i https://team4-risk.duckdns.org/api/risk-status
+HTTP/1.1 401 
+WWW-Authenticate: Bearer
+
+## Token invalido devuelve 401
+$ curl -i -H "Authorization: Bearer invalid.token.value" https://team4-risk.duckdns.org/api/risk-status
+HTTP/1.1 401 
+WWW-Authenticate: Bearer error="invalid_token", error_description="An error occurred while attempting to decode the Jwt: Malformed token", error_uri="https://tools.ietf.org/html/rfc6750#section-3.1"
+
+## Puertos de la aplicacion no expuestos a Internet
+$ curl -m 6 http://3.85.202.14:8080/
+sin respuesta (timeout/filtrado)
+$ curl -m 6 http://3.85.202.14:8081/
+sin respuesta (timeout/filtrado)
+
+## Servicio y puertos en el servidor
+$ systemctl is-active enterprise-risk-api
+active
+
+$ sudo ss -ltnp | grep -E :(80|443|8080|8081)
+LISTEN 0      511                     *:443              *:*   
+LISTEN 0      100    [::ffff:127.0.0.1]:8081             *:*   
+LISTEN 0      511                     *:80               *:*   
+
+$ curl http://127.0.0.1:8081/actuator/health
+{"status":"UP"}
+
+$ sudo journalctl -u enterprise-risk-api -n 5 --no-pager
+2026-10-14T17:59:53+0000 ip-172-31-31-111.ec2.internal java[35049]: 2026-10-14T17:59:53.570Z  INFO 35049 --- [enterprise-risk-api] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat s
+2026-10-14T17:59:53+0000 ip-172-31-31-111.ec2.internal java[35049]: 2026-10-14T17:59:53.604Z  INFO 35049 --- [enterprise-risk-api] [           main] c.e.e.e.EnterpriseRiskApiApplication     : Started 
+2026-10-14T17:59:55+0000 ip-172-31-31-111.ec2.internal java[35049]: 2026-10-14T17:59:55.267Z  INFO 35049 --- [enterprise-risk-api] [0.1-8081-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initiali
+2026-10-14T17:59:55+0000 ip-172-31-31-111.ec2.internal java[35049]: 2026-10-14T17:59:55.267Z  INFO 35049 --- [enterprise-risk-api] [0.1-8081-exec-2] o.s.web.servlet.DispatcherServlet        : Initiali
+2026-10-14T17:59:55+0000 ip-172-31-31-111.ec2.internal java[35049]: 2026-10-14T17:59:55.270Z  INFO 35049 --- [enterprise-risk-api] [0.1-8081-exec-2] o.s.web.servlet.DispatcherServlet        : Complete

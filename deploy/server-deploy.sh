@@ -30,6 +30,13 @@ find /var/www/enterprise-risk-frontend -type f -exec chmod 644 {} +
 command -v restorecon >/dev/null && restorecon -R /var/www/enterprise-risk-frontend || true
 
 install -m 0644 "$SRC/enterprise-risk.conf" /etc/httpd/conf.d/enterprise-risk.conf
+# Once the certificate exists (server-https.sh), keep the HTTP -> HTTPS
+# redirect that certbot added, since the line above overwrote it.
+DOMAIN=team4-risk.duckdns.org
+if [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+  sed -i "s#^</VirtualHost>#    RewriteCond %{SERVER_NAME} =$DOMAIN\n    RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [END,NE,R=permanent]\n</VirtualHost>#" \
+    /etc/httpd/conf.d/enterprise-risk.conf
+fi
 # mod_ssl's default ssl.conf needs a placeholder certificate that Amazon Linux
 # only creates on httpd's first start; create it so configtest can pass.
 if [ ! -s /etc/pki/tls/certs/localhost.crt ]; then
@@ -48,5 +55,10 @@ systemctl restart httpd
 
 echo "--- checks ---"
 ss -ltnp | grep -E ':(80|443|8080|8081)\b' || true
-curl -s -o /dev/null -w "GET /api/risk-status without token via Apache: %{http_code}\n" \
-  -H "Host: team4-risk.duckdns.org" http://127.0.0.1/api/risk-status
+if [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+  curl -s -o /dev/null -w "GET https://$DOMAIN/api/risk-status without token: %{http_code}\n" \
+    --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN/api/risk-status"
+else
+  curl -s -o /dev/null -w "GET /api/risk-status without token via Apache: %{http_code}\n" \
+    -H "Host: $DOMAIN" http://127.0.0.1/api/risk-status
+fi
