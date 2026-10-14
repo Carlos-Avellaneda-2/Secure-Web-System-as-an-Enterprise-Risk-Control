@@ -1,0 +1,28 @@
+[Unit]
+Description=Enterprise Risk API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=riskapi
+Group=riskapi
+WorkingDirectory=/opt/enterprise-risk-api
+Environment="AUTH0_ISSUER_URI=https://dev-onzcado3s7e0rlv3.us.auth0.com/"
+Environment="AUTH0_AUDIENCE=https://enterprise-risk-api"
+Environment="CORS_ALLOWED_ORIGINS=https://team4-risk.duckdns.org"
+# Listen only on loopback: Apache is the only public entry point.
+Environment="SERVER_ADDRESS=127.0.0.1"
+Environment="SERVER_PORT=8080"
+ExecStart=/usr/bin/java -Xmx256m -jar /opt/enterprise-risk-api/app.jar
+Restart=always
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/enterprise-risk-api
+
+[Install]
+WantedBy=multi-user.target
