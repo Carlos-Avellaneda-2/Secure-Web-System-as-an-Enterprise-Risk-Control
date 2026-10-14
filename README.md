@@ -179,7 +179,10 @@ Notas del despliegue real:
 Evidencia en [`evidencias/despliegue.txt`](evidencias/despliegue.txt).
 
 - [x] `/api/risk-status` sin token (o con token inválido) devuelve 401 (`WWW-Authenticate: Bearer`).
-- [ ] Un usuario autenticado llama `/api/risk-status` desde el frontend (captura en `evidencias/llamada-autenticada.png`).
+- [x] Un usuario autenticado llama `/api/risk-status` desde el frontend:
+
+  ![Llamada autenticada exitosa](evidencias/llamada-autenticada.png)
+
 - [x] El backend valida firma, issuer (`https://dev-onzcado3s7e0rlv3.us.auth0.com/`) y audience (`https://enterprise-risk-api`) del JWT.
 - [x] La aplicación responde en https://team4-risk.duckdns.org; http://team4-risk.duckdns.org redirige con 301.
 - [x] Certificado válido de Let's Encrypt (`CN=team4-risk.duckdns.org`, `Verify return code: 0 (ok)`).
