@@ -174,21 +174,6 @@ Notas del despliegue real:
 - Por eso el backend usa `127.0.0.1:8081` en producción, sin conflicto aunque esos contenedores vuelvan a arrancar.
 - `mod_ssl` en Amazon Linux 2023 solo genera `localhost.crt` al primer arranque de httpd; `server-deploy.sh` lo crea antes de `apachectl configtest`.
 
-## Parte 7 — Checklist de verificación
-
-Evidencia en [`evidencias/despliegue.txt`](evidencias/despliegue.txt).
-
-- [x] `/api/risk-status` sin token (o con token inválido) devuelve 401 (`WWW-Authenticate: Bearer`).
-- [x] Un usuario autenticado llama `/api/risk-status` desde el frontend:
-
-  ![Llamada autenticada exitosa](evidencias/llamada-autenticada.png)
-
-- [x] El backend valida firma, issuer (`https://dev-onzcado3s7e0rlv3.us.auth0.com/`) y audience (`https://enterprise-risk-api`) del JWT.
-- [x] La aplicación responde en https://team4-risk.duckdns.org; http://team4-risk.duckdns.org redirige con 301.
-- [x] Certificado válido de Let's Encrypt (`CN=team4-risk.duckdns.org`, `Verify return code: 0 (ok)`).
-- [x] Los puertos 8080 y 8081 no responden desde Internet.
-- [x] `sudo certbot renew --dry-run` termina con éxito; `certbot-renew.timer` activo.
-
 ## Reflexión de control de riesgos
 
 | Control | Riesgo reducido | Evidencia |
