@@ -17,7 +17,7 @@ systemctl restart enterprise-risk-api
 
 echo "Waiting for the API..."
 for _ in $(seq 1 30); do
-  curl -fs http://127.0.0.1:8080/actuator/health && echo && break
+  curl -fs http://127.0.0.1:8081/actuator/health && echo && break
   sleep 2
 done
 
@@ -30,10 +30,23 @@ find /var/www/enterprise-risk-frontend -type f -exec chmod 644 {} +
 command -v restorecon >/dev/null && restorecon -R /var/www/enterprise-risk-frontend || true
 
 install -m 0644 "$SRC/enterprise-risk.conf" /etc/httpd/conf.d/enterprise-risk.conf
+# mod_ssl's default ssl.conf needs a placeholder certificate that Amazon Linux
+# only creates on httpd's first start; create it so configtest can pass.
+if [ ! -s /etc/pki/tls/certs/localhost.crt ]; then
+  openssl req -x509 -nodes -newkey rsa:2048 -days 365 -subj "/CN=localhost" \
+    -keyout /etc/pki/tls/private/localhost.key -out /etc/pki/tls/certs/localhost.crt
+  chmod 600 /etc/pki/tls/private/localhost.key
+fi
 apachectl configtest
-systemctl reload httpd
+if ss -ltnp | grep -E ':80\b' | grep -vq httpd; then
+  echo "ERROR: port 80 is used by another process (not httpd):" >&2
+  ss -ltnp | grep -E ':80\b' >&2
+  exit 1
+fi
+systemctl enable httpd
+systemctl restart httpd
 
 echo "--- checks ---"
-ss -ltnp | grep -E ':(80|443|8080)\b' || true
+ss -ltnp | grep -E ':(80|443|8080|8081)\b' || true
 curl -s -o /dev/null -w "GET /api/risk-status without token via Apache: %{http_code}\n" \
   -H "Host: team4-risk.duckdns.org" http://127.0.0.1/api/risk-status

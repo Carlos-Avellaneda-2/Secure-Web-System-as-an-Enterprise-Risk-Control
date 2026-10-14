@@ -21,12 +21,13 @@ id riskapi >/dev/null 2>&1 || useradd --system --no-create-home --shell /sbin/no
 
 mkdir -p /opt/enterprise-risk-api /var/www/enterprise-risk-frontend
 
-# Allow Apache to proxy to 127.0.0.1:8080 if SELinux is enforcing.
+# Allow Apache to proxy to 127.0.0.1:8081 if SELinux is enforcing.
 if command -v getenforce >/dev/null && [ "$(getenforce)" != "Disabled" ]; then
   setsebool -P httpd_can_network_connect 1 || true
 fi
 
-systemctl enable --now httpd
+# httpd is started by server-deploy.sh once the virtual host is installed.
+systemctl enable httpd
 java -version
 httpd -v
 certbot --version

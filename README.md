@@ -16,7 +16,7 @@ Sistema web pequeño que aplica controles de riesgo empresarial: un frontend Rea
 Browser
   │ login y access token
   ▼
-Auth0 ───────────────► React frontend ── Bearer token ──► Spring Boot API (127.0.0.1:8080)
+Auth0 ───────────────► React frontend ── Bearer token ──► Spring Boot API (127.0.0.1:8081)
                                                         │
 Internet ── Duck DNS ── Apache + TLS (80/443) ──────────┘
 ```
@@ -82,7 +82,7 @@ capturas-auth0/  evidencia de la configuración de Auth0
 | `AUTH0_ISSUER_URI` | `https://dev-onzcado3s7e0rlv3.us.auth0.com/` (con `/` final) |
 | `AUTH0_AUDIENCE` | `https://enterprise-risk-api` |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,https://team4-risk.duckdns.org` |
-| `SERVER_ADDRESS` / `SERVER_PORT` | `0.0.0.0` / `8080` (en producción `127.0.0.1`) |
+| `SERVER_ADDRESS` / `SERVER_PORT` | `0.0.0.0` / `8080` (en producción `127.0.0.1` / `8081`) |
 
 Ejecutar en local:
 
@@ -129,7 +129,7 @@ Adaptación de la guía (Ubuntu) a Amazon Linux:
 | `/etc/apache2/sites-available/` + `a2ensite` | `/etc/httpd/conf.d/enterprise-risk.conf` |
 | `systemctl reload apache2` | `systemctl reload httpd` |
 
-**Security group de AWS**: entrada solo TCP 22 (SSH, idealmente restringido a tu IP), 80 y 443. El puerto 8080 **no** se abre.
+**Security group de AWS**: entrada solo TCP 22 (SSH, idealmente restringido a tu IP), 80 y 443. Los puertos 8080 y 8081 **no** se abren; el backend escucha solo en `127.0.0.1:8081`.
 
 Archivos en `deploy/`:
 
@@ -139,8 +139,8 @@ Archivos en `deploy/`:
 | `server-setup.sh` | Una sola vez: instala httpd, mod_ssl, Corretto 21 y certbot; crea el usuario de sistema `riskapi`. |
 | `server-deploy.sh` | Cada despliegue: instala el JAR y el servicio systemd, copia el frontend a `/var/www/enterprise-risk-frontend`, instala el virtual host y recarga Apache. |
 | `server-https.sh` | Certificado Let's Encrypt con `certbot --apache --redirect`, renovación automática y `certbot renew --dry-run`. |
-| `enterprise-risk-api.service` | Servicio systemd con issuer/audience por variables de entorno, escucha en `127.0.0.1:8080`, endurecido (`NoNewPrivileges`, `ProtectSystem=strict`). |
-| `enterprise-risk.conf` | Virtual host: SPA con rewrite a `index.html` y proxy `/api/` hacia `127.0.0.1:8080`. |
+| `enterprise-risk-api.service` | Servicio systemd con issuer/audience por variables de entorno, escucha en `127.0.0.1:8081`, endurecido (`NoNewPrivileges`, `ProtectSystem=strict`). |
+| `enterprise-risk.conf` | Virtual host: SPA con rewrite a `index.html` y proxy `/api/` hacia `127.0.0.1:8081`. |
 
 Secuencia:
 
@@ -166,7 +166,7 @@ Logs de auditoría del servicio: `sudo journalctl -u enterprise-risk-api`.
 - [x] El backend valida issuer y audience del JWT.
 - [ ] La aplicación responde en https://team4-risk.duckdns.org.
 - [ ] El navegador muestra certificado válido y candado HTTPS.
-- [ ] El puerto 8080 no es accesible desde Internet.
+- [ ] Los puertos 8080 y 8081 no son accesibles desde Internet.
 - [ ] `sudo certbot renew --dry-run` termina con éxito.
 
 ## Reflexión de control de riesgos
