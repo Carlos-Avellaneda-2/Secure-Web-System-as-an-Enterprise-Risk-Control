@@ -174,6 +174,33 @@ Notas del despliegue real:
 - Por eso el backend usa `127.0.0.1:8081` en producción, sin conflicto aunque esos contenedores vuelvan a arrancar.
 - `mod_ssl` en Amazon Linux 2023 solo genera `localhost.crt` al primer arranque de httpd; `server-deploy.sh` lo crea antes de `apachectl configtest`.
 
+## Evidencias
+
+### Llamada autenticada exitosa
+
+Usuario autenticado con Auth0 en https://team4-risk.duckdns.org llamando a `/api/risk-status` con su access token:
+
+![Llamada autenticada exitosa](evidencias/llamada-autenticada.png)
+
+### Certificado válido y verificación del despliegue
+
+Salida completa en [`evidencias/despliegue.txt`](evidencias/despliegue.txt):
+
+```
+subject=CN=team4-risk.duckdns.org
+issuer=C=US, O=Let's Encrypt, CN=YE1
+notBefore=Oct 14 16:57:49 2026 GMT
+notAfter=Jan 12 16:57:48 2027 GMT
+Verify return code: 0 (ok)
+
+$ sudo certbot renew --dry-run
+Congratulations, all simulated renewals succeeded
+
+$ curl -i https://team4-risk.duckdns.org/api/risk-status
+HTTP/1.1 401
+WWW-Authenticate: Bearer
+```
+
 ## Reflexión de control de riesgos
 
 | Control | Riesgo reducido | Evidencia |
